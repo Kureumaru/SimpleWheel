@@ -9,7 +9,8 @@
       flex-direction: column;
       align-items: center;
       font-family: Arial, sans-serif;
-      background: #2d2e5a;
+      background: #2d2e5a url('background.png') no-repeat center center;
+      background-size: cover;
       color: #f0f0f0;
       height: 100vh;
       justify-content: center;
@@ -72,9 +73,9 @@
 <body>
   <canvas id="wheel" width="480" height="480"></canvas>
   <textarea id="options">Final Fantasy VII - Remake
-    Death Stranding - PLATINUM
-    Clair Obscure Expedition 33
-    Hollow Knight SilkSong</textarea><br>
+Death Stranding - PLATINUM
+Clair Obscure Expedition 33
+Hollow Knight SilkSong</textarea><br>
   <button id="spinBtn">Spin (1 left)</button>
 
   <div id="popup"></div>
@@ -129,9 +130,9 @@
 
       const canvasSize = canvas.width;
       const center = canvasSize / 2;
-      const outsideRadius = canvasSize * 0.38;
+      const outsideRadius = canvasSize * 0.48;
       const textRadius = canvasSize * 0.27;
-      const insideRadius = canvasSize * 0.1;
+      const insideRadius = canvasSize * 0.163;
       const numOptions = options.length;
       const arc = (2 * Math.PI) / numOptions;
 
@@ -141,7 +142,6 @@
         const angle = startAngle + i * arc;
         let color = sliceColors[i % sliceColors.length];
 
-        // Highlight winning slice
         if (i === winningSliceIndex) {
           ctx.shadowColor = "#ffff66";
           ctx.shadowBlur = 25;
@@ -162,10 +162,9 @@
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Slice text
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        let fontSize = Math.max(12, 26 - numOptions);
+        let fontSize = Math.max(12, 22 - numOptions);
         ctx.font = `${fontSize}px Arial`;
         const textAngle = angle + arc / 2;
         const x = center + Math.cos(textAngle) * textRadius;
@@ -177,7 +176,6 @@
         ctx.restore();
       }
 
-      // Center image
       if (centerImg.complete) {
         const imgSize = canvasSize * 0.33;
         ctx.save();
@@ -189,7 +187,6 @@
         ctx.restore();
       }
 
-      // Central clock
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, "0");
       const minutes = now.getMinutes().toString().padStart(2, "0");
@@ -203,7 +200,6 @@
       ctx.fillText(timeStr, center, center);
       ctx.restore();
 
-      // Pointer
       ctx.fillStyle = "#ff5555";
       ctx.shadowColor = "#ff5555";
       ctx.shadowBlur = 15;
@@ -296,7 +292,6 @@
       const numOptions = options.length;
       const sliceAngle = 2 * Math.PI / numOptions;
 
-      // Tick sound
       const currentTickIndex = Math.floor(((2 * Math.PI - (startAngle % (2 * Math.PI))) / sliceAngle)) % numOptions;
       if (currentTickIndex !== lastTickIndex && spinning) {
         tickSound.currentTime = 0;
@@ -310,16 +305,12 @@
         requestAnimationFrame(animateSpin);
       } else {
         spinning = false;
-
-        // Correct for pointer at top
         let correctedAngle = (startAngle + Math.PI / 2) % (2 * Math.PI);
         winningSliceIndex = Math.floor((2 * Math.PI - correctedAngle) / sliceAngle) % numOptions;
         drawWheel();
 
-        // Highlight winning slice for 2s
         setTimeout(() => { winningSliceIndex = -1; }, 2000);
 
-        // Popup with date + time
         const now = new Date();
         const dateStr = now.toLocaleDateString();
         const timeStr = now.toLocaleTimeString();
@@ -338,6 +329,3 @@
   </script>
 </body>
 </html>
-
-
-
