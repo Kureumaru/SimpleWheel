@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spinning Wheel - Pro</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: #2d2e5a;
+      color: #f0f0f0;
+      height: 100vh;
+      justify-content: center;
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      border-radius: 50%;
+      background: #1f1f40;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      max-width: 90vw;
+      max-height: 90vw;
+    }
+    textarea {
+      width: 300px;
+      height: 100px;
+      margin-top: 15px;
+      background: #3c3c6a;
+      color: #f0f0f0;
+      border: 1px solid #888;
+      padding: 5px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #5e5edf;
+      color: #f0f0f0;
+      border: 1px solid #888;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    button:disabled {
+      background: #44448a;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    #popup {
+      position: fixed;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,85,85,0.9);
+      color: #fff;
+      padding: 20px 40px;
+      border-radius: 10px;
+      font-size: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.6s ease;
+      z-index: 1000;
+      text-align: center;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="wheel" width="480" height="480"></canvas>
+  <textarea id="options">1
+2
+3
+4
+5
+6</textarea><br>
+  <button id="spinBtn">Spin (1 left)</button>
+
+  <div id="popup"></div>
+
+  <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const spinBtn = document.getElementById("spinBtn");
+    const optionsBox = document.getElementById("options");
+    const popup = document.getElementById("popup");
+    const tickSound = document.getElementById("tickSound");
+
+    let startAngle = 0;
+    let spinning = false;
+    let spinStartTime = null;
+    let spinDuration = 0;
+    let totalRotation = 0;
+    let spinsLeft = 1;
+    let lastTickIndex = -1;
+    let winningSliceIndex = -1;
+    spinBtn.innerText = `Spin (${spinsLeft} left)`;
+
+    const sliceColors = [
+      "#ff6f61", "#6b5b95", "#88b04b", "#f7cac9",
+      "#92a8d1", "#955251", "#b565a7", "#009b77",
+      "#dd4124", "#45b8ac", "#efc050", "#5b5ea6"
+    ];
+
+    const centerImg = new Image();
+    centerImg.src = "center.png";
+
+    function getOptions() {
+      return optionsBox.value
+        .split("\n")
+        .map(o => o.trim())
+        .filter(o => o !== "");
+    }
+
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7);
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function drawWheel() {
+      const options = getOptions();
+      if (options.length === 0) return;
+
+      const canvasSize = canvas.width;
+      const center = canvasSize / 2;
+      const outsideRadius = canvasSize * 0.38;
+      const textRadius = canvasSize * 0.27;
+      const insideRadius = canvasSize * 0.1;
+      const numOptions = options.length;
+      const arc = (2 * Math.PI) / numOptions;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numOptions; i++) {
+        const angle = startAngle + i * arc;
+        let color = sliceColors[i % sliceColors.length];
+
+        // Highlight winning slice
+        if (i === winningSliceIndex) {
+          ctx.shadowColor = "#ffff66";
+          ctx.shadowBlur = 25;
+          color = shadeColor(color, 30);
+        } else {
+          ctx.shadowColor = "#000";
+          ctx.shadowBlur = spinning ? 8 : 3;
+        }
+
+        const grad = ctx.createRadialGradient(center, center, insideRadius, center, center, outsideRadius);
+        grad.addColorStop(0, color);
+        grad.addColorStop(1, shadeColor(color, -20));
+        ctx.fillStyle = grad;
+
+        ctx.beginPath();
+        ctx.arc(center, center, outsideRadius, angle, angle + arc, false);
+        ctx.arc(center, center, insideRadius, angle + arc, angle, true);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Slice text
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        let fontSize = Math.max(12, 26 - numOptions);
+        ctx.font = `${fontSize}px Arial`;
+        const textAngle = angle + arc / 2;
+        const x = center + Math.cos(textAngle) * textRadius;
+        const y = center + Math.sin(textAngle) * textRadius;
+        ctx.translate(x, y);
+        ctx.rotate(textAngle + Math.PI / 2);
+        const maxTextWidth = Math.sin(arc / 2) * textRadius * 1.2;
+        wrapText(ctx, options[i], 0, 0, maxTextWidth, fontSize + 2);
+        ctx.restore();
+      }
+
+      // Center image
+      if (centerImg.complete) {
+        const imgSize = canvasSize * 0.33;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(center, center, insideRadius, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(centerImg, center - imgSize / 2, center - imgSize / 2, imgSize, imgSize);
+        ctx.restore();
+      }
+
+      // Central clock
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, "0");
+      const minutes = now.getMinutes().toString().padStart(2, "0");
+      const timeStr = `${hours}:${minutes}`;
+      ctx.save();
+      const pulse = 1 + 0.05 * Math.sin(Date.now() / 250);
+      ctx.font = `${20 * pulse}px Arial`;
+      ctx.fillStyle = "#d98aff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(timeStr, center, center);
+      ctx.restore();
+
+      // Pointer
+      ctx.fillStyle = "#ff5555";
+      ctx.shadowColor = "#ff5555";
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.moveTo(center - 10, 20);
+      ctx.lineTo(center + 10, 20);
+      ctx.lineTo(center, 40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      let lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + " ";
+        const metrics = context.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + " ";
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+
+      const offset = -(lines.length - 1) * lineHeight / 2;
+      for (let i = 0; i < lines.length; i++) {
+        const lineWidth = context.measureText(lines[i]).width;
+        const scale = Math.min(1, maxWidth / lineWidth);
+        context.save();
+        context.scale(scale, 1);
+        context.fillText(lines[i], -lineWidth / 2, y + offset + i * lineHeight);
+        context.restore();
+      }
+    }
+
+    function easeOut(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function shadeColor(color, percent) {
+      let f = parseInt(color.slice(1), 16),
+          t = percent < 0 ? 0 : 255,
+          p = percent < 0 ? percent * -1 : percent;
+      let R = f >> 16,
+          G = f >> 8 & 0x00FF,
+          B = f & 0x0000FF;
+      return "#" + (0x1000000 + (Math.round((t - R) * p / 100) + R) * 0x10000 +
+        (Math.round((t - G) * p / 100) + G) * 0x100 +
+        (Math.round((t - B) * p / 100) + B)).toString(16).slice(1);
+    }
+
+    function showPopup(text, duration = 10000) {
+      popup.innerText = text;
+      popup.style.top = "10px";
+      popup.style.opacity = 1;
+      setTimeout(() => {
+        popup.style.opacity = 0;
+        popup.style.top = "-100px";
+      }, duration);
+    }
+
+    function spin() {
+      if (spinning || spinsLeft <= 0) return;
+      optionsBox.style.display = "none";
+      spinBtn.style.display = "none";
+      const options = getOptions();
+      if (options.length === 0) return;
+      spinning = true;
+      winningSliceIndex = -1;
+      lastTickIndex = -1;
+      spinsLeft--;
+      spinStartTime = performance.now();
+      spinDuration = 4000;
+      totalRotation = Math.random() * 360 + 1800;
+      requestAnimationFrame(animateSpin);
+    }
+
+    function animateSpin(timestamp) {
+      const elapsed = timestamp - spinStartTime;
+      const progress = Math.min(elapsed / spinDuration, 1);
+      const easedProgress = easeOut(progress);
+      const angle = totalRotation * easedProgress;
+      startAngle = angle * Math.PI / 180;
+
+      const options = getOptions();
+      const numOptions = options.length;
+      const sliceAngle = 2 * Math.PI / numOptions;
+
+      // Tick sound
+      const currentTickIndex = Math.floor(((2 * Math.PI - (startAngle % (2 * Math.PI))) / sliceAngle)) % numOptions;
+      if (currentTickIndex !== lastTickIndex && spinning) {
+        tickSound.currentTime = 0;
+        tickSound.play().catch(() => {});
+        lastTickIndex = currentTickIndex;
+      }
+
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(animateSpin);
+      } else {
+        spinning = false;
+
+        // Correct for pointer at top
+        let correctedAngle = (startAngle + Math.PI / 2) % (2 * Math.PI);
+        winningSliceIndex = Math.floor((2 * Math.PI - correctedAngle) / sliceAngle) % numOptions;
+        drawWheel();
+
+        // Highlight winning slice for 2s
+        setTimeout(() => { winningSliceIndex = -1; }, 2000);
+
+        // Popup with date + time
+        const now = new Date();
+        const dateStr = now.toLocaleDateString();
+        const timeStr = now.toLocaleTimeString();
+        showPopup(`You got: ${options[winningSliceIndex]}\n${dateStr} ${timeStr}`, 10000);
+      }
+    }
+
+    function loop() {
+      drawWheel();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+    spinBtn.addEventListener("click", spin);
+    centerImg.onload = drawWheel;
+  </script>
+</body>
+</html>
