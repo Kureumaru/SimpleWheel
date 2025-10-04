@@ -10,13 +10,22 @@
       align-items: center;
       font-family: Arial, sans-serif;
       background: #2d2e5a url('background.png') no-repeat center center;
-      background-size: cover;
+      background-size: cover;          /* default for desktop */
+      background-color: #2d2e5a;       /* fallback color */
       color: #f0f0f0;
       height: 100vh;
       justify-content: center;
       margin: 0;
       overflow: hidden;
     }
+
+    /* Mobile adjustment */
+    @media (max-width: 768px) {
+      body {
+        background-size: 100% auto;    /* always fit width on mobile */
+      }
+    }
+
     canvas {
       border-radius: 50%;
       background: #1f1f40;
@@ -72,8 +81,8 @@
 </head>
 <body>
   <canvas id="wheel" width="480" height="480"></canvas>
-  <textarea id="options">Final Fantasy VII - Remake
-    Final Fantasy Tactics - The Ivalice Chronicles
+  <textarea id="options">Final Fantasy VII Remake
+Final Fantasy Tactics
 Clair Obscure Expedition 33
 </textarea><br>
   <button id="spinBtn">Spin (1 left)</button>
@@ -164,7 +173,7 @@ Clair Obscure Expedition 33
 
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        let fontSize = Math.max(12, 22 - numOptions);
+        let fontSize = Math.max(20, 52 - numOptions);
         ctx.font = `${fontSize}px Arial`;
         const textAngle = angle + arc / 2;
         const x = center + Math.cos(textAngle) * textRadius;
@@ -192,8 +201,8 @@ Clair Obscure Expedition 33
       const minutes = now.getMinutes().toString().padStart(2, "0");
       const timeStr = `${hours}:${minutes}`;
       ctx.save();
-      const pulse = 1 + 0.05 * Math.sin(Date.now() / 250);
-      ctx.font = `${20 * pulse}px Arial`;
+      const pulse = 1 + 0.09 * Math.sin(Date.now() / 250);
+      ctx.font = `${50 * pulse}px Arial`;
       ctx.fillStyle = "#d98aff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -329,7 +338,3 @@ Clair Obscure Expedition 33
   </script>
 </body>
 </html>
-
-
-
-
