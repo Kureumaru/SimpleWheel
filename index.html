@@ -10,8 +10,8 @@
       align-items: center;
       font-family: Arial, sans-serif;
       background: #2d2e5a url('background.png') no-repeat center center;
-      background-size: cover;          /* default for desktop */
-      background-color: #2d2e5a;       /* fallback color */
+      background-size: cover;         
+      background-color: #2d2e5a;       
       color: #f0f0f0;
       height: 100vh;
       justify-content: center;
@@ -19,10 +19,10 @@
       overflow: hidden;
     }
 
-    /* Mobile adjustment */
+    
     @media (max-width: 768px) {
       body {
-        background-size: 100% auto;    /* always fit width on mobile */
+        background-size: 100% auto;   
       }
     }
 
@@ -173,7 +173,7 @@ Clair Obscure Expedition 33
 
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        let fontSize = Math.max(20, 52 - numOptions);
+        let fontSize = Math.max(20, 48 - numOptions);
         ctx.font = `${fontSize}px Arial`;
         const textAngle = angle + arc / 2;
         const x = center + Math.cos(textAngle) * textRadius;
@@ -338,3 +338,4 @@ Clair Obscure Expedition 33
   </script>
 </body>
 </html>
+
